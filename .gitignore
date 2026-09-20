@@ -10,8 +10,17 @@
 !.yarn/releases
 !.yarn/versions
 
+# Environment variables (never commit secrets)
+.env
+.env.local
+.env.*.local
+
 # testing
 /coverage
+
+# Uploaded files (never commit user data)
+storage/uploads/
+!storage/uploads/.gitkeep
 
 # next.js
 /.next/
@@ -19,6 +28,11 @@
 
 # production
 /build
+
+# Build / coverage output
+dist/
+build/
+coverage/
 
 # misc
 .DS_Store
@@ -30,8 +44,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Logs
+logs/
+*.log
+npm-debug.log*
 
 # vercel
 .vercel
@@ -39,3 +55,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
