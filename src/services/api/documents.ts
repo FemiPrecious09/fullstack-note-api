@@ -14,11 +14,11 @@ export async function listDocuments(
     limit: String(limit),
     offset: String(offset),
   });
-  return apiGet<DocumentListResponse>(`/api/documents?${query.toString()}`);
+  return apiGet<DocumentListResponse>(`/api/documents?${query.toString()}`, { skipAuthRedirect: true });
 }
 
 export async function getDocument(id: string): Promise<DocumentItem> {
-  return apiGet<DocumentItem>(`/api/documents/${id}`);
+  return apiGet<DocumentItem>(`/api/documents/${id}`, { skipAuthRedirect: true });
 }
 
 export async function uploadDocument(file: File, title: string): Promise<DocumentItem> {
@@ -30,4 +30,28 @@ export async function uploadDocument(file: File, title: string): Promise<Documen
 
 export async function deleteDocument(id: string): Promise<void> {
   return apiDelete<void>(`/api/documents/${id}`);
+}
+
+export interface DocumentChatResponse {
+  answer: string;
+}
+export interface DocumentSummaryResponse {
+  summary: string;
+  source?: string;
+}
+export interface DocumentTagsResponse {
+  tags: string[];
+}
+
+export async function getDocumentSummary(id: string, refresh = false): Promise<DocumentSummaryResponse> {
+  const query = refresh ? "?refresh=true" : "";
+  return apiGet<DocumentSummaryResponse>(`/api/documents/${id}/summary${query}`);
+}
+
+export async function getDocumentTags(id: string): Promise<DocumentTagsResponse> {
+  return apiGet<DocumentTagsResponse>(`/api/documents/${id}/tags`);
+}
+
+export async function askDocument(id: string, message: string): Promise<DocumentChatResponse> {
+  return apiPost<DocumentChatResponse>(`/api/documents/${id}/chat`, { message });
 }

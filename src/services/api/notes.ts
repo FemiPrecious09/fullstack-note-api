@@ -7,11 +7,11 @@ export interface NotePayload {
 }
 
 export async function listNotes(): Promise<Note[]> {
-  return apiGet<Note[]>("/api/notes");
+  return apiGet<Note[]>("/api/notes", { skipAuthRedirect: true });
 }
 
 export async function getNote(id: string): Promise<Note> {
-  return apiGet<Note>(`/api/notes/${id}`);
+  return apiGet<Note>(`/api/notes/${id}`, { skipAuthRedirect: true });
 }
 
 export async function createNote(payload: NotePayload): Promise<Note> {
@@ -26,10 +26,18 @@ export async function deleteNote(id: string): Promise<void> {
   return apiDelete<void>(`/api/notes/${id}`);
 }
 
-export async function getNoteSummary(id: string): Promise<NoteSummary> {
-  return apiGet<NoteSummary>(`/api/notes/${id}/summary`);
+export async function getNoteSummary(id: string, refresh = false) {
+  const query = refresh ? "?refresh=true" : "";
+  return apiGet(`/api/notes/${id}/summary${query}`);
 }
 
 export async function getNoteTags(id: string): Promise<NoteTags> {
-  return apiGet<NoteTags>(`/api/notes/${id}/tags`);
+  return apiGet<NoteTags>(`/api/notes/${id}/tags`, { skipAuthRedirect: true });
+}
+export interface ChatResponse {
+  answer: string;
+}
+
+export async function askNote(id: string, message: string): Promise<ChatResponse> {
+  return apiPost<ChatResponse>(`/api/notes/${id}/chat`, { message });
 }

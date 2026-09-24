@@ -60,6 +60,8 @@ const replaceNoteDB = async(title,body,id)=>{
   SET 
    title=$1, 
    body=$2, 
+   summary=NULL,
+   tags=NULL,
    updated_at= NOW() WHERE public_id=$3
    RETURNING* 
  `,[title,body,id])
@@ -72,6 +74,8 @@ const updateNoteDB = async(title,body,id)=>{
   SET 
    title=COALESCE($1,title), 
    body=COALESCE($2,body), 
+   summary=NULL,
+   tags=NULL,
    updated_at= NOW() WHERE public_id=$3
    RETURNING* 
  `,[title,body,id])

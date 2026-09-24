@@ -1,14 +1,37 @@
 import crypto from "crypto";
 import { createNoteDB, getNoteIdDB, sortNote, replaceNoteDB, updateNoteDB, deleteNoteDB, getSortNote, storeSummary, getSummary, getTags, storeTags} from "../models/note_model";
 import { generateFromGroq } from "../utils/groq_util"; 
+import { getUserProfileDB } from "../models/profile_model";
+import { buildPersonalization } from "../utils/personalization_util";
+
+const formatNote = (row) => ({
+  id: row.public_id,
+  title: row.title,
+  notebody: row.body,
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+});
+
+const asDuplicateTitleError = (err, title) => {
+  if (err.code === "23505") {
+    const dupErr = new Error(`You already have a note titled "${title}". Try a different title.`)
+    dupErr.status = 409
+    return dupErr
+  }
+  return err
+}
 
 export const addNote = async (user,body)=>{
  const {title, notebody} = body
  if (!title || !notebody) {
   throw new Error("Title and body are required")
  }
- const newnote = await createNoteDB(title,notebody,user.public_id)
- return newnote
+ try {
+   const newnote = await createNoteDB(title,notebody,user.public_id)
+   return formatNote(newnote)
+ } catch (err) {
+   throw asDuplicateTitleError(err, title)
+ }
 }
 
 export const getNoteId = async (id)=>{
@@ -16,7 +39,7 @@ export const getNoteId = async (id)=>{
  if(!note){
   throw new Error("Note Id not found")
  }
- return note
+ return formatNote(note)
 }
 
 export const getNote = async (user,page,limit,sort)=>{
@@ -35,7 +58,7 @@ export const getNote = async (user,page,limit,sort)=>{
  if(!notes){
   throw new Error("Notes not found")
  }
- return notes
+ return notes.map(formatNote)
 }
 
 export const getAllNote = async (page,limit,sort)=>{
@@ -55,7 +78,7 @@ export const getAllNote = async (page,limit,sort)=>{
  if(!notes){
   throw new Error("Notes not found")
  }
- return notes
+ return notes.map(formatNote)
 }
 
 export const replaceNote = async (id,body)=>{
@@ -63,40 +86,54 @@ export const replaceNote = async (id,body)=>{
  if (!title || !notebody) {
   throw new Error("Title and body are required")
  }
- const note = await replaceNoteDB(title,notebody,id)
- if(!note){
-  throw new Error("Note not found")
+ try {
+   const note = await replaceNoteDB(title,notebody,id)
+   if(!note){
+    throw new Error("Note not found")
+   }
+   return formatNote(note)
+ } catch (err) {
+   throw asDuplicateTitleError(err, title)
  }
- return note
 }
 
 export const updateNote = async (id,body)=>{
  const {title,notebody} = body
- const note = await updateNoteDB(title,notebody,id)
- if(!note){
-  throw new Error("Note not found")
+ try {
+   const note = await updateNoteDB(title,notebody,id)
+   if(!note){
+    throw new Error("Note not found")
+   }
+   return formatNote(note)
+ } catch (err) {
+   throw asDuplicateTitleError(err, title)
  }
- return note
 }
 
 const summaryCache = new Map()
 
-export const summarizeNote = async (id)=>{
+export const summarizeNote = async (id, forceRefresh = false)=>{
   try{
-    const cachedsummary = await getSummary(id)
-    if(cachedsummary){
-      return {
-        noteId: id,
-        summary: cachedsummary,
-        source: "cache"
+    if (!forceRefresh) {
+      const cachedsummary = await getSummary(id)
+      if(cachedsummary){
+        return {
+          noteId: id,
+          summary: cachedsummary,
+          source: "cache"
+        }
       }
     }
     const note = await getNoteIdDB(id)
     if(!note){
       throw new Error("Note Id not found")
     }
-    const hash = crypto.createHash("sha256").update(note.body).digest("hex")
-    if (summaryCache.has(hash)) {
+
+    const profile = await getUserProfileDB(note.profile_id)
+    const personalization = buildPersonalization(profile)
+
+    const hash = crypto.createHash("sha256").update(note.body + personalization).digest("hex")
+    if (!forceRefresh && summaryCache.has(hash)) {
       const summary = summaryCache.get(hash)
       await storeSummary(id, summary) 
       return { noteId: id, summary, source: "memory" }
@@ -105,7 +142,7 @@ export const summarizeNote = async (id)=>{
     const completion = await generateFromGroq([
         {
           role: "system",
-          content: "You are a helpful assistant that summarize notes"
+          content: `You are a helpful assistant that summarizes notes clearly and concisely. ${personalization}`
         },
         {
           role: "user",
@@ -128,7 +165,6 @@ export const summarizeNote = async (id)=>{
     throw new Error ("Failed to generate summary")
   }
 }
-
 export const createTags = async(id)=>{
   try{
     const cachedTags = await getTags(id)
@@ -175,5 +211,27 @@ export const delNote = async (id)=>{
  if(!note){
   throw new Error("Note not found")
  }
- return note
+ return formatNote(note)
+}
+
+export const askNote = async (user, id, question) => {
+  const note = await getNoteIdDB(id)
+  if (!note) {
+    const err = new Error("Note not found")
+    err.status = 404
+    throw err
+  }
+
+  const profile = await getUserProfileDB(user.public_id)
+  const personalization = buildPersonalization(profile)
+
+  const completion = await generateFromGroq([
+    {
+      role: "system",
+      content: `You are KalaRead, an assistant that helps someone understand their own notes. Answer only using the note content below and general knowledge needed to explain it. ${personalization}\n\nNote title: ${note.title}\nNote content: ${note.body}`
+    },
+    { role: "user", content: question }
+  ])
+
+  return { answer: completion.choices[0].message.content }
 }

@@ -1,9 +1,21 @@
-import Image from "next/image";
+// src/app/page.tsx
+
+import { Navbar } from "../components/layout/Navbar";
+import { Hero } from "../components/landing/Hero";
+import { Features } from "../components/landing/feature";
+import { CTASection } from "../components/landing/CTASection";
+import { Footer } from "../components/layout/Footer";
 
 export default function Home() {
   return (
-    <div className="bg-white">
-      <div className="text-2xl font-bold text-center text-amber-300">Note API</div>
-    </div>
+    <>
+      <Navbar />
+      <main className="flex-1">
+        <Hero />
+        <Features />
+        <CTASection />
+      </main>
+      <Footer />
+    </>
   );
 }

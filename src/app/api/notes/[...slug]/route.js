@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { summarizeNote,getNoteId,createTags,replaceNote,updateNote,delNote } from "../../../../lib/controllers/notes_controller";
+import { summarizeNote,getNoteId,createTags,replaceNote,updateNote,delNote,askNote } from "../../../../lib/controllers/notes_controller";
 import { authorizeOwner, authorize, authorizeRead } from "../../../../lib/middlewares/auth";
 
 export const GET = async (request,{params})=>{
@@ -20,6 +20,24 @@ export const GET = async (request,{params})=>{
   return NextResponse.json(note); 
  }catch(err){
   return NextResponse.json({error: err.message}, { status: 401 })
+ }
+}
+
+export const POST = async (request,{params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const action = slug[1]
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  if(action === "chat"){
+   const body = await request.json()
+   const result = await askNote(user, id, body.message)
+   return NextResponse.json(result)
+  }
+  return NextResponse.json({ error: "Not found" }, { status: 404 })
+ }catch(err){
+  return NextResponse.json({error: err.message}, { status: err.status || 400 })
  }
 }
 

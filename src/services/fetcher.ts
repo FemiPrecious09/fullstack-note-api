@@ -15,16 +15,9 @@ export class ApiError extends Error {
 }
 
 interface FetcherOptions extends RequestInit {
-  /** Set to true to skip the automatic redirect-to-login on 401 (e.g. for the login/register calls themselves) */
   skipAuthRedirect?: boolean;
 }
 
-/**
- * Centralized fetch wrapper.
- * - Always sends credentials (httpOnly cookie auth).
- * - Parses JSON responses and throws ApiError on non-2xx.
- * - Redirects to /login on 401 unless skipAuthRedirect is set.
- */
 export async function apiFetch<T>(
   path: string,
   options: FetcherOptions = {}
@@ -38,7 +31,7 @@ export async function apiFetch<T>(
     body,
     credentials: "include",
     headers: isFormData
-      ? headers // let the browser set multipart boundary itself
+      ? headers
       : {
           "Content-Type": "application/json",
           ...headers,

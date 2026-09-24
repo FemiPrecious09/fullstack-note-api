@@ -1,40 +1,84 @@
 import { NextResponse } from "next/server";
-import { getNote, addNote } from "../../../lib/controllers/notes_controller";
-import { authorize, authorizeRead  } from "../../../lib/middlewares/auth";
+import { summarizeNote,getNoteId,createTags,replaceNote,updateNote,delNote,askNote } from "@/lib/controllers/notes_controller";
+import { authorizeOwner, authorize, authorizeRead } from "@/lib/middlewares/auth";
 
-// Handles GET /api/notes?page=1&limit=10&sort=newest
-export const GET = async (request) => {
-  try {
-    const user = await authorize();
-    await authorizeRead(user);
-
-    // 1. Extract query parameters from the URL
-    const { searchParams } = new URL(request.url);
-    
-    // 2. Parse them with default fallbacks (Matches your Express logic)
-    const page = parseInt(searchParams.get("page")) || 1;
-    const limit = parseInt(searchParams.get("limit")) || 10;
-    const sort = searchParams.get("sort") || "newest";
-
-    // 3. Pass them individually to your controller!
-    const notes = await getNote(user, page, limit, sort);
-    
-    return NextResponse.json(notes);
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+export const GET = async (request,{params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const action = slug[1]
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  if(action === "summary"){
+   const { searchParams } = new URL(request.url)
+   const forceRefresh = searchParams.get("refresh") === "true"
+   const summary = await summarizeNote(id, forceRefresh);
+   return NextResponse.json(summary); 
+  }else if(action === "tags"){
+   const tags = await createTags(id)
+   return NextResponse.json(tags); 
   }
-};
+  const note = await getNoteId(id)
+  return NextResponse.json(note); 
+ }catch(err){
+  return NextResponse.json({error: err.message}, { status: 401 })
+ }
+}
 
-// Handles POST /api/notes
-export const POST = async (request) => {
-  try {
-    const user = await authorize();
-    const body = await request.json();
-    
-    // Pass user and body to controller
-    const newNote = await addNote(user, body);
-    return NextResponse.json(newNote, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+export const POST = async (request,{params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const action = slug[1]
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  if(action === "chat"){
+   const body = await request.json()
+   const result = await askNote(user, id, body.message)
+   return NextResponse.json(result)
   }
-};
+  return NextResponse.json({ error: "Not found" }, { status: 404 })
+ }catch(err){
+  return NextResponse.json({error: err.message}, { status: err.status || 400 })
+ }
+}
+
+export const PUT = async (request,{params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const body = await request.json()
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  const notes = await replaceNote(id,body)
+  return NextResponse.json(notes); 
+ }catch(err){
+  return NextResponse.json({error: err.message}, { status: 400 })
+ }
+}
+
+export const PATCH = async (request,{params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const body = await request.json()
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  const notes = await updateNote(id,body)
+  return NextResponse.json(notes); 
+ }catch(err){
+  return NextResponse.json({error: err.message}, { status: 400 })
+ }
+}
+export const DELETE = async (request, {params})=>{
+ try{
+  const { slug } = await params
+  const id = slug[0]
+  const user = await authorize()
+  await authorizeOwner(user,id)
+  const notes = await delNote(id)
+  return NextResponse.json(notes); 
+ }catch(err){
+  return NextResponse.json({error: err.message}, {status: 400})
+ }
+}

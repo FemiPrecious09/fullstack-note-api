@@ -5,7 +5,7 @@ export const POST = async (request) => {
  try {
   let body;
   try {
-   body = await requeXst.json();
+   body = await request.json();
   } catch (jsonError) {
    return NextResponse.json({ error: "Invalid JSON or empty body" }, { status: 400 });
   }

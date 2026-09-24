@@ -5,15 +5,19 @@ import { getProfileNote } from '../models/note_model';
 
 export const authorize = async ()=>{
  const cookieStore = await cookies()
- const token = cookieStore.get('token')?.value; //if user exist get the value instead don't do .value return undefined
+ const token = cookieStore.get('token')?.value;
  if(!token){
-  throw new Error("Unathorized Access") // DON'T USE: return NextResponse.json({message : "Unauthorized access"}, {status: 401}) //It will keep running
+  const err = new Error("Unauthorized Access")
+  err.status = 401
+  throw err
  }
  try{
   const user = jwt.verify(token, process.env.MY_SECRET_KEY)
   return user
  }catch(err){
-  throw new Error("Invalid Token") // same thing here
+  const authErr = new Error("Invalid Token")
+  authErr.status = 401
+  throw authErr
  }
 }
 
