@@ -12,6 +12,7 @@ import {
   getDocumentTags,
   askDocument,
   deleteDocument,
+  getDocumentChatHistory,
 } from "@/services/api/documents";
 import { ChatPanel } from "@/components/viewer/ChatPanel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -23,11 +24,18 @@ interface DocumentViewerProps {
   id: string;
 }
 
+interface ChatMsg {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function DocumentViewer({ id }: DocumentViewerProps) {
   const router = useRouter();
   const [document, setDocument] = useState<DocumentItem | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [initialMessages, setInitialMessages] = useState<ChatMsg[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +59,21 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
         if (!cancelled) {
           if (summaryRes.status === "fulfilled") setSummary(summaryRes.value.summary);
           if (tagsRes.status === "fulfilled") setTags(tagsRes.value.tags);
+        }
+
+        try {
+          const historyRes = await getDocumentChatHistory(id);
+          if (!cancelled) {
+            setInitialMessages(
+              historyRes.messages.map((m) => ({
+                id: crypto.randomUUID(),
+                role: m.role,
+                content: m.content,
+              }))
+            );
+          }
+        } catch {
+          // No history yet, or fetch failed — start with an empty chat.
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load this document.");
@@ -130,16 +153,16 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
       </div>
 
       <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2">
-        <div className="flex flex-col items-center justify-center gap-3 border-b border-ink/10 p-6 lg:border-b-0 lg:border-r">
-          {document.file_url ? (
-            <iframe src={document.file_url} className="h-full w-full rounded-md border border-ink/10" />
-          ) : (
-            <p className="text-sm text-ink/40">No preview available for this file.</p>
-          )}
-        </div>
+        <div className="flex flex-col overflow-hidden border-b border-ink/10 lg:border-b-0 lg:border-r">
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 overflow-y-auto p-6">
+            {document.file_url ? (
+              <iframe src={document.file_url} className="h-full w-full rounded-md border border-ink/10" />
+            ) : (
+              <p className="text-sm text-ink/40">No preview available for this file.</p>
+            )}
+          </div>
 
-        <div className="flex flex-col overflow-hidden">
-          <div className="max-h-[45vh] shrink-0 overflow-y-auto border-b border-ink/10 p-6">
+          <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-ink/10 p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-medium uppercase tracking-wide text-ink/50">
                 Summary
@@ -178,10 +201,10 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
               <Play className="h-3.5 w-3.5" />
             </button>
           </div>
+        </div>
 
-          <div className="min-h-0 flex-1">
-            <ChatPanel onSend={handleAsk} placeholder="Ask about this document..." />
-          </div>
+        <div className="min-h-0">
+          <ChatPanel onSend={handleAsk} placeholder="Ask about this document..." initialMessages={initialMessages} />
         </div>
       </div>
 

@@ -55,3 +55,9 @@ export async function getDocumentTags(id: string): Promise<DocumentTagsResponse>
 export async function askDocument(id: string, message: string): Promise<DocumentChatResponse> {
   return apiPost<DocumentChatResponse>(`/api/documents/${id}/chat`, { message });
 }
+
+export async function getDocumentChatHistory(id: string) {
+  return apiGet<{ messages: { role: "user" | "assistant"; content: string; created_at: string }[] }>(
+    `/api/documents/${id}/chat`
+  );
+}

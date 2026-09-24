@@ -3,6 +3,7 @@ import { createNoteDB, getNoteIdDB, sortNote, replaceNoteDB, updateNoteDB, delet
 import { generateFromGroq } from "../utils/groq_util"; 
 import { getUserProfileDB } from "../models/profile_model";
 import { buildPersonalization } from "../utils/personalization_util";
+import { getChatHistory, addChatMessage } from "../models/chat_model";
 
 const formatNote = (row) => ({
   id: row.public_id,
@@ -225,13 +226,26 @@ export const askNote = async (user, id, question) => {
   const profile = await getUserProfileDB(user.public_id)
   const personalization = buildPersonalization(profile)
 
+  const history = await getChatHistory("note", id)
+  const historyMessages = history.map(m => ({ role: m.role, content: m.content }))
+
+  await addChatMessage("note", id, "user", question)
+
   const completion = await generateFromGroq([
     {
       role: "system",
       content: `You are KalaRead, an assistant that helps someone understand their own notes. Answer only using the note content below and general knowledge needed to explain it. ${personalization}\n\nNote title: ${note.title}\nNote content: ${note.body}`
     },
+    ...historyMessages,
     { role: "user", content: question }
   ])
 
-  return { answer: completion.choices[0].message.content }
+  const answer = completion.choices[0].message.content
+  await addChatMessage("note", id, "assistant", answer)
+
+  return { answer }
+}
+
+export const getNoteChatHistory = async (id) => {
+  return await getChatHistory("note", id)
 }

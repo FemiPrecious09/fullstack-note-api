@@ -41,3 +41,9 @@ export interface ChatResponse {
 export async function askNote(id: string, message: string): Promise<ChatResponse> {
   return apiPost<ChatResponse>(`/api/notes/${id}/chat`, { message });
 }
+
+export async function getNoteChatHistory(id: string) {
+  return apiGet<{ messages: { role: "user" | "assistant"; content: string; created_at: string }[] }>(
+    `/api/notes/${id}/chat`
+  );
+}

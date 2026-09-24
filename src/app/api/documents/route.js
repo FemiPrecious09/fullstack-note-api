@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { summarizeDocument } from "@/lib/controllers/document_controller";
+import { listDocuments, uploadDocument } from "@/lib/controllers/document_controller";
 import { authorize } from "@/lib/middlewares/auth";
 
-export const GET = async (request, { params }) => {
+// GET /api/documents?limit=10&offset=0
+export const GET = async (request) => {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const forceRefresh = searchParams.get("refresh") === "true";
     const user = await authorize();
-    const result = await summarizeDocument(user, id, forceRefresh);
+    const { searchParams } = new URL(request.url);
+    const query = Object.fromEntries(searchParams.entries());
+    const result = await listDocuments(user, query);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: err.status || 400 });
@@ -20,9 +20,9 @@ export const POST = async (request) => {
   try {
     const user = await authorize();
     const formData = await request.formData();
-    
-    const file = formData.get("file"); 
-    const title = formData.get("title"); // Get title if frontend sends it
+
+    const file = formData.get("file");
+    const title = formData.get("title");
 
     const document = await uploadDocument(user, file, title);
     return NextResponse.json(document, { status: 201 });

@@ -16,6 +16,7 @@ import {
 import { getUserProfileDB } from "../models/profile_model";
 import { generateFromGroq } from "../utils/groq_util";
 import { buildPersonalization } from "../utils/personalization_util";
+import { getChatHistory, addChatMessage } from "../models/chat_model";
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 10;
@@ -180,16 +181,29 @@ export const askDocument = async (user, id, question) => {
   const profile = await getUserProfileDB(user.public_id);
   const personalization = buildPersonalization(profile);
 
+  const history = await getChatHistory("document", id);
+  const historyMessages = history.map(m => ({ role: m.role, content: m.content }));
+
+  await addChatMessage("document", id, "user", question);
+
   const completion = await generateFromGroq([
     {
       role: "system",
       content: `You are KalaRead, an assistant that helps someone understand a document they uploaded. Answer only using the document content below and general knowledge needed to explain it. ${personalization}\n\nDocument title: ${doc.title}\nDocument content:\n${doc.extracted_text.slice(0, MAX_CONTEXT_CHARS)}`,
     },
+    ...historyMessages,
     { role: "user", content: question },
   ]);
 
-  return { answer: completion.choices[0].message.content };
+  const answer = completion.choices[0].message.content;
+  await addChatMessage("document", id, "assistant", answer);
+
+  return { answer };
 };
+
+export const getDocumentChatHistory = async (id) => {
+  return await getChatHistory("document", id)
+}
 
 module.exports = {
   listDocuments,
@@ -199,4 +213,5 @@ module.exports = {
   summarizeDocument,
   tagDocument,
   askDocument,
+  getDocumentChatHistory
 };

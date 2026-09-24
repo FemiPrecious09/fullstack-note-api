@@ -6,8 +6,8 @@ import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "@/components/viewer/Markdown";
 import { cn } from "@/lib/util";
-import { Markdown } from "./Markdown";
 
 interface ChatMessage {
   id: string;
@@ -18,10 +18,11 @@ interface ChatMessage {
 interface ChatPanelProps {
   onSend: (message: string) => Promise<string>;
   placeholder?: string;
+  initialMessages?: ChatMessage[];
 }
 
-export function ChatPanel({ onSend, placeholder = "Ask a question..." }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function ChatPanel({ onSend, placeholder = "Ask a question...", initialMessages = [] }: ChatPanelProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);

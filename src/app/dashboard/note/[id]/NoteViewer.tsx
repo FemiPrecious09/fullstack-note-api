@@ -6,7 +6,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react";
-import { getNote, getNoteSummary, getNoteTags, askNote, updateNote, deleteNote } from "@/services/api/notes";
+import {
+  getNote,
+  getNoteSummary,
+  getNoteTags,
+  askNote,
+  updateNote,
+  deleteNote,
+  getNoteChatHistory,
+} from "@/services/api/notes";
 import { ChatPanel } from "@/components/viewer/ChatPanel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Markdown } from "@/components/viewer/Markdown";
@@ -20,11 +28,18 @@ interface NoteViewerProps {
   id: string;
 }
 
+interface ChatMsg {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function NoteViewer({ id }: NoteViewerProps) {
   const router = useRouter();
   const [note, setNote] = useState<Note | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [initialMessages, setInitialMessages] = useState<ChatMsg[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +72,21 @@ export default function NoteViewer({ id }: NoteViewerProps) {
         if (cancelled) return;
         setNote(noteData);
         await loadAiExtras();
+
+        try {
+          const historyRes = await getNoteChatHistory(id);
+          if (!cancelled) {
+            setInitialMessages(
+              historyRes.messages.map((m) => ({
+                id: crypto.randomUUID(),
+                role: m.role,
+                content: m.content,
+              }))
+            );
+          }
+        } catch {
+          // No history yet, or fetch failed — start with an empty chat.
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not load this note.");
       } finally {
@@ -85,7 +115,6 @@ export default function NoteViewer({ id }: NoteViewerProps) {
       const updated = await updateNote(id, { title: editTitle, notebody: editBody });
       setNote(updated);
       setIsEditing(false);
-      // Backend clears the cached summary/tags on edit, so refresh both.
       setSummary(null);
       setTags([]);
       await loadAiExtras();
@@ -192,46 +221,46 @@ export default function NoteViewer({ id }: NoteViewerProps) {
       </div>
 
       <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2">
-        <div className="overflow-y-auto border-b border-ink/10 p-6 lg:border-b-0 lg:border-r">
-          {isEditing ? (
-            <div className="flex flex-col gap-4">
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Title"
-                disabled={isSaving}
-              />
-              <Textarea
-                value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
-                placeholder="Note content"
-                disabled={isSaving}
-                className="min-h-[300px]"
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSaveEdit}
+        <div className="flex flex-col overflow-hidden border-b border-ink/10 lg:border-b-0 lg:border-r">
+          <div className="flex-1 overflow-y-auto p-6">
+            {isEditing ? (
+              <div className="flex flex-col gap-4">
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Title"
                   disabled={isSaving}
-                  className="bg-indigo text-paper hover:bg-indigo-dark"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-                <Button
-                  onClick={() => setIsEditing(false)}
+                />
+                <Textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  placeholder="Note content"
                   disabled={isSaving}
-                  className="bg-transparent text-ink/70 hover:bg-ink/5"
-                >
-                  Cancel
-                </Button>
+                  className="min-h-[300px]"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={isSaving}
+                    className="bg-indigo text-paper hover:bg-indigo-dark"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSaving}
+                    className="bg-transparent text-ink/70 hover:bg-ink/5"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/80">{note.notebody}</p>
-          )}
-        </div>
+            ) : (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/80">{note.notebody}</p>
+            )}
+          </div>
 
-        <div className="flex flex-col overflow-hidden">
-          <div className="max-h-[45vh] shrink-0 overflow-y-auto border-b border-ink/10 p-6">
+          <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-ink/10 p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-medium uppercase tracking-wide text-ink/50">
                 Summary
@@ -260,10 +289,10 @@ export default function NoteViewer({ id }: NoteViewerProps) {
               </div>
             )}
           </div>
+        </div>
 
-          <div className="min-h-0 flex-1">
-            <ChatPanel onSend={handleAsk} placeholder="Ask about this note..." />
-          </div>
+        <div className="min-h-0">
+          <ChatPanel onSend={handleAsk} placeholder="Ask about this note..." initialMessages={initialMessages} />
         </div>
       </div>
 
