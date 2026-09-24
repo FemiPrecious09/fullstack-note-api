@@ -153,16 +153,16 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
       </div>
 
       <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2">
-        <div className="flex flex-col overflow-hidden border-b border-ink/10 lg:border-b-0 lg:border-r">
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 overflow-y-auto p-6">
+        <div className="overflow-y-auto border-b border-ink/10 p-6 lg:border-b-0 lg:border-r">
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
             {document.file_url ? (
-              <iframe src={document.file_url} className="h-full w-full rounded-md border border-ink/10" />
+              <iframe src={document.file_url} className="h-full min-h-[50vh] w-full rounded-md border border-ink/10" />
             ) : (
               <p className="text-sm text-ink/40">No preview available for this file.</p>
             )}
           </div>
 
-          <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-ink/10 p-6">
+          <div className="mt-8 border-t border-ink/10 pt-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-medium uppercase tracking-wide text-ink/50">
                 Summary

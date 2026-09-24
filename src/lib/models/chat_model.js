@@ -22,7 +22,7 @@ const getRecentChats = async (profileId, limit = 10) => {
     SELECT * FROM (
       SELECT 'note' as type, n.public_id as id, n.title as title, MAX(cm.created_at) as last_message_at
       FROM chat_message cm
-      JOIN note n ON n.public_id = cm.resource_id AND cm.resource_type = 'note'
+      JOIN note n ON n.public_id::text = cm.resource_id AND cm.resource_type = 'note'
       WHERE n.profile_id = $1
       GROUP BY n.public_id, n.title
 

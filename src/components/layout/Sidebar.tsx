@@ -5,8 +5,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, StickyNote, User, LogOut, FileText, MessageCircle } from "lucide-react";
+import { LayoutGrid, StickyNote, User, LogOut, FileText, PanelLeftClose } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useChatRefreshStore } from "@/store/chatRefreshStore";
 import { getRecentConversations } from "@/services/api/chat";
 import { cn } from "@/lib/util";
 import type { RecentConversation } from "@/services/api/chat";
@@ -19,13 +20,15 @@ const NAV_ITEMS = [
 
 interface SidebarProps {
   onNavigate?: () => void;
+  onCollapse?: () => void;
 }
 
-export function Sidebar({ onNavigate }: SidebarProps) {
+export function Sidebar({ onNavigate, onCollapse }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
   const profile = useAuthStore((state) => state.profile);
+  const refreshKey = useChatRefreshStore((state) => state.refreshKey);
 
   const [recentChats, setRecentChats] = useState<RecentConversation[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
@@ -45,7 +48,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, refreshKey]);
 
   async function handleLogout() {
     await logout();
@@ -55,9 +58,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
   return (
     <aside className="flex w-60 flex-col border-r border-ink/10 bg-paper-dim px-4 py-6">
-      <Link href="/dashboard" onClick={onNavigate} className="px-2 font-display text-xl font-medium text-indigo">
-        KalaRead
-      </Link>
+      <div className="flex items-center justify-between px-2">
+        <Link href="/dashboard" onClick={onNavigate} className="font-display text-xl font-medium text-indigo">
+          KalaRead
+        </Link>
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            aria-label="Collapse sidebar"
+            className="text-ink/40 transition-colors hover:text-ink"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
       <nav className="mt-8 flex flex-col gap-1">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {

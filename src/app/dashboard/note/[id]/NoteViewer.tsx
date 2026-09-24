@@ -221,46 +221,44 @@ export default function NoteViewer({ id }: NoteViewerProps) {
       </div>
 
       <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2">
-        <div className="flex flex-col overflow-hidden border-b border-ink/10 lg:border-b-0 lg:border-r">
-          <div className="flex-1 overflow-y-auto p-6">
-            {isEditing ? (
-              <div className="flex flex-col gap-4">
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Title"
+        <div className="overflow-y-auto border-b border-ink/10 p-6 lg:border-b-0 lg:border-r">
+          {isEditing ? (
+            <div className="flex flex-col gap-4">
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Title"
+                disabled={isSaving}
+              />
+              <Textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                placeholder="Note content"
+                disabled={isSaving}
+                className="min-h-[300px]"
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveEdit}
                   disabled={isSaving}
-                />
-                <Textarea
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  placeholder="Note content"
+                  className="bg-indigo text-paper hover:bg-indigo-dark"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  onClick={() => setIsEditing(false)}
                   disabled={isSaving}
-                  className="min-h-[300px]"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveEdit}
-                    disabled={isSaving}
-                    className="bg-indigo text-paper hover:bg-indigo-dark"
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                  <Button
-                    onClick={() => setIsEditing(false)}
-                    disabled={isSaving}
-                    className="bg-transparent text-ink/70 hover:bg-ink/5"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+                  className="bg-transparent text-ink/70 hover:bg-ink/5"
+                >
+                  Cancel
+                </Button>
               </div>
-            ) : (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/80">{note.notebody}</p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/80">{note.notebody}</p>
+          )}
 
-          <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-ink/10 p-6">
+          <div className="mt-8 border-t border-ink/10 pt-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-sm font-medium uppercase tracking-wide text-ink/50">
                 Summary

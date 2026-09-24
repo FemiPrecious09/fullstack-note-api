@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { summarizeNote,getNoteId,createTags,replaceNote,updateNote,delNote,askNote } from "../../../../lib/controllers/notes_controller";
+import { summarizeNote,getNoteId,createTags,replaceNote,updateNote,delNote,askNote,getNoteChatHistory } from "../../../../lib/controllers/notes_controller";
 import { authorizeOwner, authorize, authorizeRead } from "../../../../lib/middlewares/auth";
 
 export const GET = async (request,{params})=>{
@@ -10,11 +10,16 @@ export const GET = async (request,{params})=>{
   const user = await authorize()
   await authorizeOwner(user,id)
   if(action === "summary"){
-   const summary = await summarizeNote(id);
+   const { searchParams } = new URL(request.url)
+   const forceRefresh = searchParams.get("refresh") === "true"
+   const summary = await summarizeNote(id, forceRefresh);
    return NextResponse.json(summary); 
   }else if(action === "tags"){
    const tags = await createTags(id)
    return NextResponse.json(tags); 
+  }else if(action === "chat"){
+   const history = await getNoteChatHistory(id)
+   return NextResponse.json({ messages: history })
   }
   const note = await getNoteId(id)
   return NextResponse.json(note); 

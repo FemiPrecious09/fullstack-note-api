@@ -7,6 +7,7 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/viewer/Markdown";
+import { useChatRefreshStore } from "@/store/chatRefreshStore";
 import { cn } from "@/lib/util";
 
 interface ChatMessage {
@@ -27,6 +28,7 @@ export function ChatPanel({ onSend, placeholder = "Ask a question...", initialMe
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const bumpRefresh = useChatRefreshStore((state) => state.bumpRefresh);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,6 +48,7 @@ export function ChatPanel({ onSend, placeholder = "Ask a question...", initialMe
     try {
       const answer = await onSend(trimmed);
       setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: answer }]);
+      bumpRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
     } finally {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X, PanelLeftOpen } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 
@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -40,9 +41,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-paper">
-      <div className="hidden lg:flex">
-        <Sidebar />
-      </div>
+      {desktopSidebarOpen && (
+        <div className="hidden lg:flex">
+          <Sidebar onCollapse={() => setDesktopSidebarOpen(false)} />
+        </div>
+      )}
+
+      {!desktopSidebarOpen && (
+        <button
+          onClick={() => setDesktopSidebarOpen(true)}
+          aria-label="Open sidebar"
+          className="fixed left-3 top-4 z-40 hidden rounded-md p-1.5 text-ink/50 hover:bg-ink/5 hover:text-ink lg:block"
+        >
+          <PanelLeftOpen className="h-5 w-5" />
+        </button>
+      )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3 lg:hidden">
