@@ -1,6 +1,6 @@
 import crypto from "crypto";
 const storage = require("../utils/storage");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 import {
   addDataDocument,
   getDocumentByIdDB,
@@ -49,19 +49,41 @@ const ensureExtractedText = (doc) => {
   }
 };
 
+const extractText = async (buffer, mimeType) => {
+  if (mimeType === "application/pdf") {
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text;
+  }
+  return buffer.toString("utf-8");
+};
+
 export const listDocuments = async (user, query) => {
   const { limit, offset } = parsePagination(query);
   const { rows, total } = await getDocumentsByProfileDB(user.public_id, limit, offset);
+  const data = rows.map((doc) => ({ ...doc, file_url: `/api/documents/${doc.id}/file` }));
   return {
-    meta: buildMeta(total, limit, offset, rows.length),
-    data: rows,
+    meta: buildMeta(total, limit, offset, data.length),
+    data,
   };
 };
 
 export const getDocument = async (user, id) => {
   const doc = await getDocumentByIdDB(id, user.public_id);
   if (!doc) throw new Error("Document not found");
-  return doc;
+  return { ...doc, file_url: `/api/documents/${doc.id}/file` };
+};
+
+export const getDocumentFile = async (user, id) => {
+  const doc = await getDocumentByIdDB(id, user.public_id);
+  if (!doc) throw new Error("Document not found");
+  const buffer = await storage.get(doc.storage_key);
+  return {
+    buffer,
+    mimeType: doc.mime_type || "application/octet-stream",
+    filename: doc.original_filename || doc.title,
+  };
 };
 
 export const uploadDocument = async (user, file, title) => {
@@ -95,20 +117,35 @@ export const uploadDocument = async (user, file, title) => {
     throw err;
   }
 
+  // Text extraction happens inline (not backgrounded) for simplicity.
+  // Fine for typical document sizes; very large PDFs will make the
+  // upload request take noticeably longer to respond.
   try {
-    let text = "";
-    if (mimeType === "application/pdf") {
-      const parsed = await pdfParse(buffer);
-      text = parsed.text;
-    } else {
-      text = buffer.toString("utf-8");
-    }
+    const text = await extractText(buffer, mimeType);
     await storeExtractedText(id, text);
   } catch (err) {
     await storeExtractionError(id, err.message || "Extraction failed");
   }
 
   return await getDocumentByIdDB(id, user.public_id);
+};
+
+export const reprocessDocument = async (user, id) => {
+  const doc = await getDocumentByIdDB(id, user.public_id);
+  if (!doc) throw new Error("Document not found");
+
+  const buffer = await storage.get(doc.storage_key);
+
+  try {
+    const text = await extractText(buffer, doc.mime_type);
+    await storeExtractedText(id, text);
+    return { status: "ready" };
+  } catch (err) {
+    await storeExtractionError(id, err.message || "Extraction failed");
+    const retryErr = new Error("Extraction failed again. The file may be corrupted or unsupported.");
+    retryErr.status = 422;
+    throw retryErr;
+  }
 };
 
 export const deleteDocument = async (user, id) => {
@@ -173,6 +210,10 @@ export const tagDocument = async (user, id) => {
   return { tags };
 };
 
+export const getDocumentChatHistory = async (id) => {
+  return await getChatHistory("document", id)
+}
+
 export const askDocument = async (user, id, question) => {
   const doc = await getDocumentByIdDB(id, user.public_id);
   if (!doc) throw new Error("Document not found");
@@ -201,17 +242,15 @@ export const askDocument = async (user, id, question) => {
   return { answer };
 };
 
-export const getDocumentChatHistory = async (id) => {
-  return await getChatHistory("document", id)
-}
-
 module.exports = {
   listDocuments,
   getDocument,
+  getDocumentFile,
   uploadDocument,
+  reprocessDocument,
   deleteDocument,
   summarizeDocument,
   tagDocument,
+  getDocumentChatHistory,
   askDocument,
-  getDocumentChatHistory
 };

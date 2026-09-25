@@ -30,8 +30,6 @@ export default function ProfileSettingsPage() {
   const error = useAuthStore((state) => state.error);
   const clearError = useAuthStore((state) => state.clearError);
 
-  // The dashboard layout guard guarantees a profile exists before this page
-  // can render, so this fallback only matters for the brief initial paint.
   const [form, setForm] = useState<Profile>(
     storeProfile ?? {
       occupation: "",
@@ -64,7 +62,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="mx-auto max-w-2xl p-8">
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/60 transition-colors hover:text-ink"
@@ -73,7 +71,7 @@ export default function ProfileSettingsPage() {
         Back to dashboard
       </Link>
 
-      <div className="mt-6 max-w-lg">
+      <div className="mt-6">
         <h1 className="font-display text-2xl font-medium text-ink">Profile settings</h1>
         <p className="mt-1 text-sm text-ink/60">
           Update how KalaRead explains things to you. Changes apply to future summaries and answers.

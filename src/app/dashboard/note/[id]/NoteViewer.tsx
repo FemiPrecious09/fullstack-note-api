@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, X, Check, RefreshCw, Volume2, Play, Pause } from "lucide-react";
 import {
   getNote,
   getNoteSummary,
@@ -21,6 +21,7 @@ import { Markdown } from "@/components/viewer/Markdown";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useSpeech } from "@/hooks/useSpeech";
 import { cn } from "@/lib/util";
 import type { Note } from "@/services/types";
 
@@ -52,6 +53,8 @@ export default function NoteViewer({ id }: NoteViewerProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [isRegeneratingSummary, setIsRegeneratingSummary] = useState(false);
+
+  const { isPlaying, toggle, isSupported } = useSpeech(summary);
 
   async function loadAiExtras() {
     const [summaryRes, tagsRes] = await Promise.allSettled([getNoteSummary(id), getNoteTags(id)]);
@@ -286,6 +289,16 @@ export default function NoteViewer({ id }: NoteViewerProps) {
                 ))}
               </div>
             )}
+
+            <button
+              onClick={toggle}
+              disabled={!summary || !isSupported}
+              className="mt-4 flex items-center gap-2 rounded-md bg-gold/20 px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-gold/30 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Volume2 className="h-4 w-4" />
+              {isPlaying ? "Stop" : "Listen in Pidgin"}
+              {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </div>
 

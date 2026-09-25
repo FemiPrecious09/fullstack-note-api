@@ -61,3 +61,7 @@ export async function getDocumentChatHistory(id: string) {
     `/api/documents/${id}/chat`
   );
 }
+
+export async function reprocessDocument(id: string): Promise<{ status: string }> {
+  return apiPost<{ status: string }>(`/api/documents/${id}/reprocess`, undefined);
+}

@@ -57,7 +57,7 @@ export function Sidebar({ onNavigate, onCollapse }: SidebarProps) {
   }
 
   return (
-    <aside className="flex w-60 flex-col border-r border-ink/10 bg-paper-dim px-4 py-6">
+    <aside className="flex h-full w-60 flex-col border-r border-ink/10 bg-paper-dim px-4 py-6">
       <div className="flex items-center justify-between px-2">
         <Link href="/dashboard" onClick={onNavigate} className="font-display text-xl font-medium text-indigo">
           KalaRead

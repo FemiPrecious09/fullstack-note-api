@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Volume2, Play, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Volume2, Play, Pause, Trash2, RefreshCw } from "lucide-react";
 import {
   getDocument,
   getDocumentSummary,
@@ -13,10 +13,12 @@ import {
   askDocument,
   deleteDocument,
   getDocumentChatHistory,
+  reprocessDocument,
 } from "@/services/api/documents";
 import { ChatPanel } from "@/components/viewer/ChatPanel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Markdown } from "@/components/viewer/Markdown";
+import { useSpeech } from "@/hooks/useSpeech";
 import { cn } from "@/lib/util";
 import type { DocumentItem } from "@/services/types";
 
@@ -43,6 +45,18 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [isRegeneratingSummary, setIsRegeneratingSummary] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+
+  const { isPlaying, toggle, isSupported } = useSpeech(summary);
+
+  async function loadAiExtras() {
+    const [summaryRes, tagsRes] = await Promise.allSettled([getDocumentSummary(id), getDocumentTags(id)]);
+    if (summaryRes.status === "fulfilled") setSummary(summaryRes.value.summary);
+    else setSummary(null);
+    if (tagsRes.status === "fulfilled") setTags(tagsRes.value.tags);
+    else setTags([]);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -54,12 +68,7 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
         const doc = await getDocument(id);
         if (cancelled) return;
         setDocument(doc);
-
-        const [summaryRes, tagsRes] = await Promise.allSettled([getDocumentSummary(id), getDocumentTags(id)]);
-        if (!cancelled) {
-          if (summaryRes.status === "fulfilled") setSummary(summaryRes.value.summary);
-          if (tagsRes.status === "fulfilled") setTags(tagsRes.value.tags);
-        }
+        await loadAiExtras();
 
         try {
           const historyRes = await getDocumentChatHistory(id);
@@ -86,6 +95,7 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleAsk(message: string): Promise<string> {
@@ -114,6 +124,19 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
       setError(err instanceof Error ? err.message : "Could not regenerate summary.");
     } finally {
       setIsRegeneratingSummary(false);
+    }
+  }
+
+  async function handleRetryExtraction() {
+    setIsRetrying(true);
+    setRetryError(null);
+    try {
+      await reprocessDocument(id);
+      await loadAiExtras();
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : "Retry failed. Try re-uploading the file instead.");
+    } finally {
+      setIsRetrying(false);
     }
   }
 
@@ -181,6 +204,19 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
               {summary ? <Markdown content={summary} /> : "Summary unavailable right now."}
             </div>
 
+            {!summary && (
+              <div className="mt-2">
+                <button
+                  onClick={handleRetryExtraction}
+                  disabled={isRetrying}
+                  className="text-xs font-medium text-indigo hover:underline disabled:opacity-50"
+                >
+                  {isRetrying ? "Retrying..." : "Retry reading this file"}
+                </button>
+                {retryError && <p className="mt-1 text-xs text-red-600">{retryError}</p>}
+              </div>
+            )}
+
             {tags.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {tags.map((tag) => (
@@ -192,13 +228,13 @@ export default function DocumentViewer({ id }: DocumentViewerProps) {
             )}
 
             <button
-              disabled
-              className="mt-4 flex items-center gap-2 rounded-md bg-paper-dim px-3 py-2 text-sm text-ink/40"
-              title="Audio playback isn't wired up yet — UI only for now"
+              onClick={toggle}
+              disabled={!summary || !isSupported}
+              className="mt-4 flex items-center gap-2 rounded-md bg-gold/20 px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-gold/30 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Volume2 className="h-4 w-4" />
-              Listen in Pidgin
-              <Play className="h-3.5 w-3.5" />
+              {isPlaying ? "Stop" : "Listen in Pidgin"}
+              {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>

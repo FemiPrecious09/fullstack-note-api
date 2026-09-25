@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="relative w-60">
+          <div className="relative h-full w-60">
             <Sidebar onNavigate={() => setMobileNavOpen(false)} />
             <button
               onClick={() => setMobileNavOpen(false)}
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           </div>
           <button
-            className="flex-1 bg-ink/30"
+            className="h-full flex-1 bg-ink/30"
             aria-label="Close menu overlay"
             onClick={() => setMobileNavOpen(false)}
           />

@@ -77,7 +77,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="mx-auto max-w-5xl p-8">
       <div>
         <h1 className="font-display text-2xl font-medium text-ink">
           Hello{user?.username ? `, ${user.username}` : ""}

@@ -20,7 +20,7 @@ const addChatMessage = async (resourceType, resourceId, role, content) => {
 const getRecentChats = async (profileId, limit = 10) => {
   const result = await pool.query(`
     SELECT * FROM (
-      SELECT 'note' as type, n.public_id as id, n.title as title, MAX(cm.created_at) as last_message_at
+      SELECT 'note' as type, n.public_id::text as id, n.title as title, MAX(cm.created_at) as last_message_at
       FROM chat_message cm
       JOIN note n ON n.public_id::text = cm.resource_id AND cm.resource_type = 'note'
       WHERE n.profile_id = $1
